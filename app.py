@@ -400,16 +400,14 @@ def create_zone_dialog(points, w, h):
 
 @st.dialog("⭐️ LEVEL SETTINGS", width="large")
 def edit_mission_dialog(item_id):
-    # 1. ดึงข้อมูลครั้งแรก
-    res = supabase.table("cleaning_plans").select("*").eq("id", item_id).execute()
-    if not res.data: 
-        st.error("ไม่พบข้อมูลด่านนี้")
-        return
-    item = res.data[0]
-
-    # จองพื้นที่สำหรับ Success Message และ รายการ (List)
-    msg_slot = st.empty()
+    # 1. ดึงข้อมูลเริ่มต้น (ทำแค่ครั้งเดียวตอนเปิด)
+    if f"temp_item_{item_id}" not in st.session_state:
+        res = supabase.table("cleaning_plans").select("*").eq("id", item_id).execute()
+        if res.data:
+            st.session_state[f"temp_item_{item_id}"] = res.data[0]
     
+    item = st.session_state[f"temp_item_{item_id}"]
+
     t1, t2, t3, t4 = st.tabs(["📊 ข้อมูลหลัก", "🧹 กิจกรรม Big Cleaning", "🎒 อุปกรณ์ (Tools)", "🧨 ลบด่าน"])
     
     with t1:
@@ -418,11 +416,10 @@ def edit_mission_dialog(item_id):
             u_staff = st.text_input("ฮีโร่ผู้รับผิดชอบหลัก", value=item.get('responsible_staff', ''))
             if st.form_submit_button("💾 บันทึกการเปลี่ยนแปลง"):
                 supabase.table("cleaning_plans").update({"zone_name": u_name, "responsible_staff": u_staff}).eq("id", item_id).execute()
-                msg_slot.success("บันทึกข้อมูลหลักเรียบร้อย! (ปิดหน้าต่างเพื่อดูการอัปเดตบนแผนที่)")
+                st.toast("บันทึกข้อมูลหลักแล้ว!", icon="💾")
     
     with t2:
         st.markdown("### 🧹 ภารกิจ Big Cleaning Day")
-        # --- ส่วนของ Input ---
         with st.container(border=True):
             act_sel = st.selectbox("เลือกกิจกรรมแนะนำ", ["➕ พิมพ์เพิ่มเอง..."] + PRESET_ACTIVITIES, key=f"sel_act_{item_id}")
             custom_act = st.text_input("📝 ระบุกิจกรรม", key=f"ca_input_{item_id}")
@@ -433,26 +430,25 @@ def edit_mission_dialog(item_id):
             if st.button("➕ เพิ่มกิจกรรมเข้าแผน", use_container_width=True):
                 final_act = custom_act if act_sel == "➕ พิมพ์เพิ่มเอง..." else act_sel
                 if final_act:
-                    current_acts = item.get('activities', [])
-                    current_acts.append({"name": final_act, "people": int(num_people), "hours": int(hrs)})
-                    supabase.table("cleaning_plans").update({"activities": current_acts}).eq("id", item_id).execute()
-                    # ✅ ใช้ st.toast แทน rerun เพื่อไม่ให้หน้าจอปิด
-                    st.toast(f"✅ เพิ่ม {final_act} สำเร็จ!", icon="🧹")
-                    # บังคับให้ Streamlit อัปเดตเฉพาะ Dialog
-                    st.rerun() 
+                    # อัปเดต Database
+                    new_acts = item.get('activities', [])
+                    new_acts.append({"name": final_act, "people": int(num_people), "hours": int(hrs)})
+                    supabase.table("cleaning_plans").update({"activities": new_acts}).eq("id", item_id).execute()
+                    # อัปเดตตัวแปรในหน้าจอทันที
+                    st.session_state[f"temp_item_{item_id}"]['activities'] = new_acts
+                    st.toast(f"เพิ่ม {final_act} แล้ว", icon="✅")
+                    st.rerun() # rerun ใน Dialog ยุคใหม่จะไม่ปิดหน้าต่าง ถ้าเรียกจากปุ่มข้างใน
 
         st.divider()
-        # แสดงรายการกิจกรรม (ดึงสดจาก item ที่มี)
         for i, a in enumerate(item.get('activities', [])):
             c1, c2, c3, c4 = st.columns([3, 1.5, 1.5, 0.5])
             c1.write(f"🔹 **{a['name']}**")
             c2.write(f"👥 {a.get('people', 1)} คน")
             c3.write(f"⏱️ {a.get('hours', 0)} ชม.")
             if c4.button("🗑️", key=f"del_act_{item_id}_{i}"):
-                new_acts = item.get('activities', [])
-                new_acts.pop(i)
-                supabase.table("cleaning_plans").update({"activities": new_acts}).eq("id", item_id).execute()
-                st.toast("🗑️ ลบกิจกรรมแล้ว")
+                item['activities'].pop(i)
+                supabase.table("cleaning_plans").update({"activities": item['activities']}).eq("id", item_id).execute()
+                st.toast("ลบกิจกรรมแล้ว")
                 st.rerun()
 
     with t3:
@@ -463,10 +459,11 @@ def edit_mission_dialog(item_id):
         qty = c_qty.number_input("จำนวน", min_value=1, value=1, key=f"t_qty_{item_id}")
         
         if c_btn.button("➕ เก็บเข้ากระเป๋า", use_container_width=True):
-            current_tools = item.get('tools', [])
-            current_tools.append({"item": final_tool, "amount": int(qty)})
-            supabase.table("cleaning_plans").update({"tools": current_tools}).eq("id", item_id).execute()
-            st.toast(f"📦 เพิ่ม {final_tool} แล้ว!")
+            new_tools = item.get('tools', [])
+            new_tools.append({"item": final_tool, "amount": int(qty)})
+            supabase.table("cleaning_plans").update({"tools": new_tools}).eq("id", item_id).execute()
+            st.session_state[f"temp_item_{item_id}"]['tools'] = new_tools
+            st.toast(f"เพิ่ม {final_tool} แล้ว", icon="📦")
             st.rerun()
             
         st.divider()
@@ -474,18 +471,18 @@ def edit_mission_dialog(item_id):
             col_t, col_b = st.columns([5, 1])
             col_t.markdown(f"📦 **{t['item']}** x{t['amount']}")
             if col_b.button("🗑️", key=f"del_t_{item_id}_{i}"):
-                new_tools = item.get('tools', [])
-                new_tools.pop(i)
-                supabase.table("cleaning_plans").update({"tools": new_tools}).eq("id", item_id).execute()
-                st.toast("🗑️ ลบอุปกรณ์แล้ว")
+                item['tools'].pop(i)
+                supabase.table("cleaning_plans").update({"tools": item['tools']}).eq("id", item_id).execute()
+                st.toast("ลบอุปกรณ์แล้ว")
                 st.rerun()
 
     with t4:
-        st.error("⚠️ การลบด่านจะปิดหน้าต่างนี้ทันที")
+        st.warning("⚠️ การลบด่านจะปิดหน้าต่างนี้ทันที")
         if st.button("🧨 ยืนยันการลบด่าน", use_container_width=True):
             supabase.table("cleaning_plans").delete().eq("id", item_id).execute()
-            # ล้างค่าใน session_state เพื่อไม่ให้มันเด้งเปิดซ้ำ
-            st.session_state.last_c = None
+            if f"temp_item_{item_id}" in st.session_state:
+                del st.session_state[f"temp_item_{item_id}"]
+            st.session_state.last_c = None 
             st.rerun()
 
 # --- 4. MAIN LAYOUT ---
