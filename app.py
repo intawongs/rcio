@@ -325,7 +325,7 @@ try:
 except:
     st.error("❌ เชื่อมต่อฐานข้อมูลไม่ได้!"); st.stop()
 
-MASTER_TOOLS = ["ไม้กวาด", "น้ำยา", "ผ้าคลุมกันฝุ่น", "ถุงขยะ", "ถังน้ำ", "แปรงขัดพื้น", "เครื่องดูดฝุ่น", "ไม้ถูพื้น", "ถุงมือ", "หน้ากากกันฝุ่น"]
+MASTER_TOOLS = ["ไม้ก broom", "น้ำยา", "ผ้าคลุมกันฝุ่น", "ถุงขยะ", "ถังน้ำ", "แปรงขัดพื้น", "เครื่องดูดฝุ่น", "ไม้ถูพื้น", "ถุงมือ", "หน้ากากกันฝุ่น"]
 
 PRESET_ACTIVITIES = [
     "สะสาง: แยกของไม่จำเป็นออก",
@@ -375,6 +375,13 @@ def is_convex(points):
     return all(x > 0 for x in cp) or all(x < 0 for x in cp)
 
 # --- 3. DIALOGS ---
+
+@st.dialog("✅ สำเร็จ!")
+def success_dialog(msg):
+    st.write(f"### {msg}")
+    if st.button("ตกลง", use_container_width=True):
+        st.rerun()
+
 @st.dialog("🚩 สร้างด่านใหม่")
 def create_zone_dialog(points, w, h):
     st.markdown("### 🍄 สร้างโซนใหม่")
@@ -398,7 +405,6 @@ def create_zone_dialog(points, w, h):
 
 @st.dialog("⭐️ LEVEL SETTINGS", width="large")
 def edit_mission_dialog(item_id):
-    # ดึงข้อมูลจากฐานข้อมูล
     res = supabase.table("cleaning_plans").select("*").eq("id", item_id).execute()
     if not res.data: 
         st.error("ไม่พบข้อมูลด่านนี้")
@@ -413,7 +419,7 @@ def edit_mission_dialog(item_id):
             u_staff = st.text_input("ฮีโร่ผู้รับผิดชอบหลัก", value=item.get('responsible_staff', ''))
             if st.form_submit_button("💾 บันทึกการเปลี่ยนแปลง"):
                 supabase.table("cleaning_plans").update({"zone_name": u_name, "responsible_staff": u_staff}).eq("id", item_id).execute()
-                st.toast("บันทึกข้อมูลหลักเรียบร้อย!", icon="✅")
+                success_dialog("บันทึกข้อมูลหลักเรียบร้อย!")
     
     with t2:
         st.markdown("### 🧹 ภารกิจ Big Cleaning Day")
@@ -430,8 +436,7 @@ def edit_mission_dialog(item_id):
                     current_acts = item.get('activities', [])
                     current_acts.append({"name": final_act, "people": int(num_people), "hours": int(hrs)})
                     supabase.table("cleaning_plans").update({"activities": current_acts}).eq("id", item_id).execute()
-                    st.toast(f"เพิ่มกิจกรรม '{final_act}' สำเร็จ!")
-                    st.rerun()
+                    success_dialog(f"เพิ่มกิจกรรม '{final_act}' สำเร็จ!")
 
         st.divider()
         for i, a in enumerate(item.get('activities', [])):
@@ -443,7 +448,7 @@ def edit_mission_dialog(item_id):
                 new_acts = item.get('activities', [])
                 new_acts.pop(i)
                 supabase.table("cleaning_plans").update({"activities": new_acts}).eq("id", item_id).execute()
-                st.rerun()
+                success_dialog("ลบกิจกรรมเรียบร้อย!")
 
     with t3:
         st.markdown("### 🎒 คลังไอเทมสนับสนุน")
@@ -456,8 +461,7 @@ def edit_mission_dialog(item_id):
             current_tools = item.get('tools', [])
             current_tools.append({"item": final_tool, "amount": int(qty)})
             supabase.table("cleaning_plans").update({"tools": current_tools}).eq("id", item_id).execute()
-            st.toast(f"เพิ่ม {final_tool} สำเร็จ!")
-            st.rerun()
+            success_dialog(f"เพิ่ม {final_tool} เข้าคลังแล้ว!")
             
         st.divider()
         for i, t in enumerate(item.get('tools', [])):
@@ -467,12 +471,13 @@ def edit_mission_dialog(item_id):
                 new_tools = item.get('tools', [])
                 new_tools.pop(i)
                 supabase.table("cleaning_plans").update({"tools": new_tools}).eq("id", item_id).execute()
-                st.rerun()
+                success_dialog("ลบอุปกรณ์เรียบร้อย!")
 
     with t4:
         st.error("⚠️ การลบด่านจะปิดหน้าต่างนี้ทันที")
         if st.button("🧨 ยืนยันการลบด่าน", use_container_width=True, key=f"del_zone_{item_id}"):
             supabase.table("cleaning_plans").delete().eq("id", item_id).execute()
+            st.session_state.last_c = None 
             st.rerun()
 
 # --- 4. MAIN LAYOUT ---
@@ -513,13 +518,11 @@ with tab_map:
             click = streamlit_image_coordinates(img, key="m_map", width=None)
         except: st.error("ไม่พบไฟล์ map.png")
 
-# --- 5. LOGIC (ส่วนที่ปรับปรุงใหม่เพื่อไม่ให้ Dialog ปิด) ---
+# --- 5. LOGIC ---
 if click:
     cx, cy = click["x"], click["y"]
-    
     if "last_c" not in st.session_state or st.session_state.last_c != (cx, cy):
         st.session_state.last_c = (cx, cy)
-        
         target = None
         for p in all_plans:
             c = p.get('coords', {}).get('points', [])
@@ -530,10 +533,8 @@ if click:
                     break
         
         if target: 
-            # 🚀 หัวใจสำคัญ: เปิด Dialog แล้วหยุดการทำงานของโค้ดบรรทัดล่างทันที
             edit_mission_dialog(target['id'])
             st.stop() 
-            
         else:
             st.session_state.points.append((cx, cy))
             if len(st.session_state.points) == 4:
