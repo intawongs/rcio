@@ -398,7 +398,7 @@ def create_zone_dialog(points, w, h):
                 st.session_state.points = []
                 st.rerun()
 
-@st.dialog("⭐️ LEVEL SETTINGS")
+@st.dialog("⭐️ LEVEL SETTINGS", width="large")
 def edit_mission_dialog(item_id):
     res = supabase.table("cleaning_plans").select("*").eq("id", item_id).execute()
     if not res.data: return
