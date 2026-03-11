@@ -324,6 +324,11 @@ try:
 except:
     st.error("❌ เชื่อมต่อฐานข้อมูลไม่ได้!"); st.stop()
 
+# --- 🆕 [NEW] ตรวจสอบข้อความฝากแจ้งเตือน (วางไว้บนสุดหลัง Config) ---
+if "success_msg" in st.session_state:
+    st.toast(st.session_state.success_msg)
+    del st.session_state.success_msg # แสดงแล้วลบทิ้งทันทีป้องกันเด้งซ้ำ
+
 MASTER_TOOLS = ["ไม้กวาด", "น้ำยา", "ผ้าคลุมกันฝุ่น", "ถุงขยะ", "ถังน้ำ", "แปรงขัดพื้น", "เครื่องดูดฝุ่น", "ไม้ถูพื้น", "ถุงมือ", "หน้ากากกันฝุ่น"]
 
 PRESET_ACTIVITIES = [
@@ -394,18 +399,17 @@ def create_zone_dialog(points, w, h):
                     "coords": {"points": p_pct}, "tools": [], "activities": []
                 }).execute()
                 st.session_state.points = []
+                st.session_state.success_msg = f"🏰 สร้างด่าน {z} สำเร็จ!" # 🆕 ฝากข้อความ
                 st.rerun()
 
 @st.dialog("⭐️ LEVEL SETTINGS", width="large")
 def edit_mission_dialog(item_id):
-    # ดึงข้อมูลล่าสุด
     res = supabase.table("cleaning_plans").select("*").eq("id", item_id).execute()
     if not res.data: 
         st.error("ไม่พบข้อมูลด่านนี้")
         return
     item = res.data[0]
 
-    # สลับลำดับ: กิจกรรม -> อุปกรณ์
     t1, t2, t3, t4 = st.tabs(["📊 ข้อมูลหลัก", "🧹 กิจกรรม (Mission)", "🎒 อุปกรณ์ (Items)", "🧨 ลบด่าน"])
     
     with t1:
@@ -414,7 +418,7 @@ def edit_mission_dialog(item_id):
             u_staff = st.text_input("ฮีโร่ผู้รับผิดชอบหลัก", value=item.get('responsible_staff', ''))
             if st.form_submit_button("💾 บันทึกการเปลี่ยนแปลง"):
                 supabase.table("cleaning_plans").update({"zone_name": u_name, "responsible_staff": u_staff}).eq("id", item_id).execute()
-                st.toast("บันทึกเรียบร้อย!", icon="✅")
+                st.session_state.success_msg = "✅ อัปเดตข้อมูลสำเร็จ!" # 🆕 ฝากข้อความ
                 st.rerun()
     
     with t2:
@@ -432,7 +436,7 @@ def edit_mission_dialog(item_id):
                     current_acts = item.get('activities', [])
                     current_acts.append({"name": final_act, "people": int(num_people), "hours": int(hrs)})
                     supabase.table("cleaning_plans").update({"activities": current_acts}).eq("id", item_id).execute()
-                    st.toast(f"เพิ่ม {final_act} แล้ว", icon="🧹")
+                    st.session_state.success_msg = f"🧹 เพิ่มภารกิจ {final_act} เรียบร้อย!" # 🆕 ฝากข้อความ
                     st.rerun()
 
         st.divider()
@@ -445,6 +449,7 @@ def edit_mission_dialog(item_id):
                 new_acts = item.get('activities', [])
                 new_acts.pop(i)
                 supabase.table("cleaning_plans").update({"activities": new_acts}).eq("id", item_id).execute()
+                st.session_state.success_msg = "🗑️ ลบกิจกรรมออกแล้ว" # 🆕 ฝากข้อความ
                 st.rerun()
 
     with t3:
@@ -458,7 +463,7 @@ def edit_mission_dialog(item_id):
             current_tools = item.get('tools', [])
             current_tools.append({"item": final_tool, "amount": int(qty)})
             supabase.table("cleaning_plans").update({"tools": current_tools}).eq("id", item_id).execute()
-            st.toast(f"เพิ่ม {final_tool} แล้ว", icon="🎒")
+            st.session_state.success_msg = f"🎒 เก็บ {final_tool} เข้าคลังแล้ว!" # 🆕 ฝากข้อความ
             st.rerun()
             
         st.divider()
@@ -469,6 +474,7 @@ def edit_mission_dialog(item_id):
                 new_tools = item.get('tools', [])
                 new_tools.pop(i)
                 supabase.table("cleaning_plans").update({"tools": new_tools}).eq("id", item_id).execute()
+                st.session_state.success_msg = "🗑️ นำอุปกรณ์ออกจากคลังแล้ว" # 🆕 ฝากข้อความ
                 st.rerun()
 
     with t4:
@@ -476,6 +482,7 @@ def edit_mission_dialog(item_id):
         if st.button("🧨 ยืนยันการลบด่าน", use_container_width=True, key=f"del_zone_{item_id}"):
             supabase.table("cleaning_plans").delete().eq("id", item_id).execute()
             st.session_state.last_c = None 
+            st.session_state.success_msg = "🧨 ระเบิดด่านทิ้งเรียบร้อย!" # 🆕 ฝากข้อความ
             st.rerun()
 
 # --- 4. MAIN LAYOUT ---
