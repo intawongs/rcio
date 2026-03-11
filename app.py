@@ -305,22 +305,58 @@ with tab_map:
 #         except: st.error("ไม่พบไฟล์ map.png"); st.stop()
 
 # --- 5. LOGIC ---
+# --- 5. LOGIC (จุดที่ต้องแก้) ---
 if click:
     cx, cy = click["x"], click["y"]
     if "last_c" not in st.session_state or st.session_state.last_c != (cx, cy):
         st.session_state.last_c = (cx, cy)
+        
+        # เช็คว่าคลิกโดนด่านที่มีอยู่แล้วหรือไม่
         target = None
         for p in all_plans:
             c = p.get('coords', {}).get('points', [])
             if c:
                 poly = [(float(pt['x'].replace('%',''))*w/100, float(pt['y'].replace('%',''))*h/100) for pt in c]
                 if is_inside(cx, cy, poly): target = p; break
-        if target: edit_mission_dialog(target['id'])
+        
+        if target: 
+            edit_mission_dialog(target['id'])
         else:
+            # เพิ่มจุดใหม่เข้าไปในลิสต์
             st.session_state.points.append((cx, cy))
+            
+            # เมื่อครบ 4 จุด ให้ตรวจสอบเบื้องต้น
             if len(st.session_state.points) == 4:
-                create_zone_dialog(st.session_state.points, w, h)
-            else: st.rerun()
+                # --- [เพิ่มการตรวจสอบตรงนี้] ---
+                # เช็คว่าจุดที่ 4 อยู่ใกล้จุดที่ 1 เกินไปจนเป็นสามเหลี่ยมหรือไม่ (ตัวอย่าง)
+                p1 = st.session_state.points[0]
+                p4 = st.session_state.points[3]
+                distance = ((p1[0]-p4[0])**2 + (p1[1]-p4[1])**2)**0.5
+                
+                if distance < 20: # ถ้าจุดสุดท้ายใกล้จุดแรกเกินไป (วาดไม่กว้างพอ)
+                    st.error("⚠️ รูปทรงไม่ถูกต้อง! โปรดวาดให้ครอบคลุมพื้นที่สี่เหลี่ยม")
+                    st.session_state.points = [] # ล้างจุดทิ้ง
+                    st.toast("วาดใหม่นะมาริโอ้! 🍄", icon="🧨")
+                else:
+                    create_zone_dialog(st.session_state.points, w, h)
+            else: 
+                st.rerun()
+# if click:
+#     cx, cy = click["x"], click["y"]
+#     if "last_c" not in st.session_state or st.session_state.last_c != (cx, cy):
+#         st.session_state.last_c = (cx, cy)
+#         target = None
+#         for p in all_plans:
+#             c = p.get('coords', {}).get('points', [])
+#             if c:
+#                 poly = [(float(pt['x'].replace('%',''))*w/100, float(pt['y'].replace('%',''))*h/100) for pt in c]
+#                 if is_inside(cx, cy, poly): target = p; break
+#         if target: edit_mission_dialog(target['id'])
+#         else:
+#             st.session_state.points.append((cx, cy))
+#             if len(st.session_state.points) == 4:
+#                 create_zone_dialog(st.session_state.points, w, h)
+#             else: st.rerun()
 
 with tab_score:
     if all_plans:
