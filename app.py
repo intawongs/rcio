@@ -349,10 +349,32 @@ if click:
                     st.session_state.points = [] 
                     # ไม่ต้องใส่ st.rerun() ตรงนี้ เพื่อให้ Error Message ค้างให้คนอ่าน
                 else:
-                    # 2. ถ้าผ่าน ให้เปิดหน้าต่างสร้างด่าน
-                    create_zone_dialog(st.session_state.points, w, h)
+                    # 2. [เพิ่มใหม่] เช็คว่ามีจุดใดจุดหนึ่งไปอยู่ในโซนอื่นที่มีอยู่แล้วไหม
+                    is_overlapping = False
+                    for p_existing in all_plans:
+                        c = p_existing.get('coords', {}).get('points', [])
+                        if c:
+                            # สร้างพื้นที่ของด่านที่มีอยู่แล้ว
+                            poly_existing = [(float(pt['x'].replace('%',''))*w/100, float(pt['y'].replace('%',''))*h/100) for pt in c]
+                            
+                            # เช็คจุดใหม่ทั้ง 4 จุด ว่ามีจุดไหนหลุดเข้าไปในด่านเก่าไหม
+                            for new_pt in st.session_state.points:
+                                if is_inside(new_pt[0], new_pt[1], poly_existing):
+                                    is_overlapping = True
+                                    break
+                    
+                    if is_overlapping:
+                        st.error("⚠️ พื้นที่นี้มีเจ้าของแล้ว! ห้ามวาดทับซ้อนกัน")
+                        st.session_state.points = []
+                    else:
+                        # ถ้าผ่านทุกด่าน... สร้างด่านได้!
+                        create_zone_dialog(st.session_state.points, w, h)
             else: 
                 st.rerun()
+
+
+
+                
 # if click:
 #     cx, cy = click["x"], click["y"]
 #     if "last_c" not in st.session_state or st.session_state.last_c != (cx, cy):
