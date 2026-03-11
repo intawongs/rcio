@@ -212,8 +212,8 @@ with tab_map:
         # --- 1. ปุ่มและรูปมาริโอ้ (จะอยู่ด้านบนในมือถือ) ---
         st.button("🔄 ล้างจุดวาด", on_click=lambda: st.session_state.update({"points": []}), use_container_width=True)
         
-        if os.path.exists("mario.PNG"):
-            st.image("mario.PNG", use_container_width=True)
+        if os.path.exists("mario.png"):
+            st.image("mario.png", use_container_width=True)
             
         st.markdown("""
         <div class="how-to-play">
