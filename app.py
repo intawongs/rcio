@@ -93,6 +93,19 @@ def is_inside(x, y, poly):
         p1x, p1y = p2x, p2y
     return inside
 
+def is_convex(points):
+    # ฟังก์ชันเช็คว่ารูป 4 จุดนี้ "กางออก" เป็นสี่เหลี่ยม ไม่ใช่รูปนาฬิกาทราย
+    def cross_product(o, a, b):
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+    
+    cp = []
+    n = len(points)
+    for i in range(n):
+        cp.append(cross_product(points[i], points[(i+1)%n], points[(i+2)%n]))
+    
+    # ถ้าค่า Cross Product มีเครื่องหมายเดียวกันหมด (+ หรือ - ทั้งหมด) แสดงว่าเป็นสี่เหลี่ยมที่นูนสวย
+    return all(x > 0 for x in cp) or all(x < 0 for x in cp)
+
 # --- 3. DIALOGS ---
 #@st.dialog("🚩 สร้างด่านใหม่")
 # def create_zone_dialog(points, w, h):
@@ -327,17 +340,13 @@ if click:
             
             # เมื่อครบ 4 จุด ให้ตรวจสอบเบื้องต้น
             if len(st.session_state.points) == 4:
-                # --- [เพิ่มการตรวจสอบตรงนี้] ---
-                # เช็คว่าจุดที่ 4 อยู่ใกล้จุดที่ 1 เกินไปจนเป็นสามเหลี่ยมหรือไม่ (ตัวอย่าง)
-                p1 = st.session_state.points[0]
-                p4 = st.session_state.points[3]
-                distance = ((p1[0]-p4[0])**2 + (p1[1]-p4[1])**2)**0.5
-                
-                if distance < 20: # ถ้าจุดสุดท้ายใกล้จุดแรกเกินไป (วาดไม่กว้างพอ)
-                    st.error("⚠️ รูปทรงไม่ถูกต้อง! โปรดวาดให้ครอบคลุมพื้นที่สี่เหลี่ยม")
-                    st.session_state.points = [] # ล้างจุดทิ้ง
-                    st.toast("วาดใหม่นะมาริโอ้! 🍄", icon="🧨")
+                # --- ตรวจสอบว่าวาดเป็นสี่เหลี่ยมที่ถูกต้องหรือไม่ ---
+                if not is_convex(st.session_state.points):
+                    st.error("⚠️ เส้นห้ามตัดกัน! โปรดวาดเรียงลำดับ ตามเข็มหรือทวนเข็มนาฬิกา")
+                    st.session_state.points = [] # ล้างจุดทิ้งเพื่อให้วาดใหม่
+                    # st.rerun() # ถ้าใช้ Streamlit เวอร์ชันใหม่ไม่ต้องใส่ก็ได้ แต่ใส่ไว้กันเหนียวครับ
                 else:
+                    # ถ้าผ่านการตรวจสอบ ให้เปิดหน้าต่างสร้างด่านทันที
                     create_zone_dialog(st.session_state.points, w, h)
             else: 
                 st.rerun()
