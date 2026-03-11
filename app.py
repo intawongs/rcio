@@ -192,8 +192,8 @@ with tab_map:
         st.button("🔄 ล้างจุดวาด", on_click=lambda: st.session_state.update({"points": []}), use_container_width=True)
         
         # --- แสดงรูปจากไฟล์ mario.PNG ---
-        if os.path.exists("mario.PNG"):
-            st.image("mario.PNG", use_container_width=True)
+        if os.path.exists("mario.png"):
+            st.image("mario.png", use_container_width=True)
         else:
             st.warning("⚠️ ไม่พบไฟล์ mario.PNG ในโฟลเดอร์")
         
