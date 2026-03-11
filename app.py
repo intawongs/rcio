@@ -241,8 +241,8 @@ with tab_map:
                         (poly[0][0], poly[0][1] - 35), 
                         f" {p['zone_name']}", 
                         fill="#F8B800", 
-                        font_size=45, 
-                        stroke_width=4, 
+                        font_size=28, 
+                        stroke_width=3, 
                         stroke_fill="black"
                     )
             
