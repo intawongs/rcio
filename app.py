@@ -322,12 +322,12 @@ try:
     key: str = st.secrets["SUPABASE_KEY"]
     supabase: Client = create_client(url, key)
 except:
-    st.error("❌ เชื่อมต่อฐานข้อมูลไม่ได้!"); st.stop()
+    st.error("❌ เชื่อมต่อฐานข้อมูลไม่ได้! กรุณาเช็ค Secrets"); st.stop()
 
-# --- 🆕 [NEW] ตรวจสอบข้อความฝากแจ้งเตือน (วางไว้บนสุดหลัง Config) ---
+# --- 🆕 ตรวจสอบข้อความฝากแจ้งเตือน (Post-Rerun Toast) ---
 if "success_msg" in st.session_state:
     st.toast(st.session_state.success_msg)
-    del st.session_state.success_msg # แสดงแล้วลบทิ้งทันทีป้องกันเด้งซ้ำ
+    del st.session_state.success_msg
 
 MASTER_TOOLS = ["ไม้กวาด", "น้ำยา", "ผ้าคลุมกันฝุ่น", "ถุงขยะ", "ถังน้ำ", "แปรงขัดพื้น", "เครื่องดูดฝุ่น", "ไม้ถูพื้น", "ถุงมือ", "หน้ากากกันฝุ่น"]
 
@@ -349,6 +349,12 @@ st.markdown("""
     .stTabs [aria-selected="true"] { background-color: #E4000F !important; }
     .how-to-play { background-color: #F8B800; border: 3px solid #000; padding: 15px; border-radius: 10px; margin-top: 10px; font-size: 16px; color: #000; line-height: 1.6; box-shadow: 4px 4px 0px #000; }
     .stButton > button { background-color: #F8B800 !important; border: 3px solid #000 !important; font-weight: 800 !important; font-size: 20px !important; box-shadow: 3px 3px 0px #8C5200; margin-bottom: 10px; }
+    
+    /* Responsive for Mobile */
+    @media (max-width: 600px) {
+        h1 { font-size: 20px !important; }
+        .stTabs [data-baseweb="tab"] { font-size: 14px !important; padding: 5px !important; }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -399,7 +405,7 @@ def create_zone_dialog(points, w, h):
                     "coords": {"points": p_pct}, "tools": [], "activities": []
                 }).execute()
                 st.session_state.points = []
-                st.session_state.success_msg = f"🏰 สร้างด่าน {z} สำเร็จ!" # 🆕 ฝากข้อความ
+                st.session_state.success_msg = f"🏰 สร้างด่าน {z} สำเร็จ!"
                 st.rerun()
 
 @st.dialog("⭐️ LEVEL SETTINGS", width="large")
@@ -418,7 +424,7 @@ def edit_mission_dialog(item_id):
             u_staff = st.text_input("ฮีโร่ผู้รับผิดชอบหลัก", value=item.get('responsible_staff', ''))
             if st.form_submit_button("💾 บันทึกการเปลี่ยนแปลง"):
                 supabase.table("cleaning_plans").update({"zone_name": u_name, "responsible_staff": u_staff}).eq("id", item_id).execute()
-                st.session_state.success_msg = "✅ อัปเดตข้อมูลสำเร็จ!" # 🆕 ฝากข้อความ
+                st.session_state.success_msg = "✅ อัปเดตข้อมูลสำเร็จ!"
                 st.rerun()
     
     with t2:
@@ -436,7 +442,7 @@ def edit_mission_dialog(item_id):
                     current_acts = item.get('activities', [])
                     current_acts.append({"name": final_act, "people": int(num_people), "hours": int(hrs)})
                     supabase.table("cleaning_plans").update({"activities": current_acts}).eq("id", item_id).execute()
-                    st.session_state.success_msg = f"🧹 เพิ่มภารกิจ {final_act} เรียบร้อย!" # 🆕 ฝากข้อความ
+                    st.session_state.success_msg = f"🧹 เพิ่มภารกิจ {final_act} เรียบร้อย!"
                     st.rerun()
 
         st.divider()
@@ -449,7 +455,7 @@ def edit_mission_dialog(item_id):
                 new_acts = item.get('activities', [])
                 new_acts.pop(i)
                 supabase.table("cleaning_plans").update({"activities": new_acts}).eq("id", item_id).execute()
-                st.session_state.success_msg = "🗑️ ลบกิจกรรมออกแล้ว" # 🆕 ฝากข้อความ
+                st.session_state.success_msg = "🗑️ ลบกิจกรรมออกแล้ว"
                 st.rerun()
 
     with t3:
@@ -463,7 +469,7 @@ def edit_mission_dialog(item_id):
             current_tools = item.get('tools', [])
             current_tools.append({"item": final_tool, "amount": int(qty)})
             supabase.table("cleaning_plans").update({"tools": current_tools}).eq("id", item_id).execute()
-            st.session_state.success_msg = f"🎒 เก็บ {final_tool} เข้าคลังแล้ว!" # 🆕 ฝากข้อความ
+            st.session_state.success_msg = f"🎒 เก็บ {final_tool} เข้าคลังแล้ว!"
             st.rerun()
             
         st.divider()
@@ -474,7 +480,7 @@ def edit_mission_dialog(item_id):
                 new_tools = item.get('tools', [])
                 new_tools.pop(i)
                 supabase.table("cleaning_plans").update({"tools": new_tools}).eq("id", item_id).execute()
-                st.session_state.success_msg = "🗑️ นำอุปกรณ์ออกจากคลังแล้ว" # 🆕 ฝากข้อความ
+                st.session_state.success_msg = "🗑️ นำอุปกรณ์ออกจากคลังแล้ว"
                 st.rerun()
 
     with t4:
@@ -482,7 +488,7 @@ def edit_mission_dialog(item_id):
         if st.button("🧨 ยืนยันการลบด่าน", use_container_width=True, key=f"del_zone_{item_id}"):
             supabase.table("cleaning_plans").delete().eq("id", item_id).execute()
             st.session_state.last_c = None 
-            st.session_state.success_msg = "🧨 ระเบิดด่านทิ้งเรียบร้อย!" # 🆕 ฝากข้อความ
+            st.session_state.success_msg = "🧨 ระเบิดด่านทิ้งเรียบร้อย!"
             st.rerun()
 
 # --- 4. MAIN LAYOUT ---
@@ -494,6 +500,11 @@ all_plans = get_all_plans()
 with tab_map:
     col_info, col_display = st.columns([1.5, 5])
     with col_info:
+        # --- 🔍 ระบบ Zoom Scale ---
+        st.markdown("### 🔍 Zoom Scale")
+        zoom_scale = st.slider("ปรับขนาด (%)", 50, 250, 100, step=10, help="เลื่อนเพื่อขยายแผนที่ให้จิ้มง่ายขึ้น")
+        zoom_factor = zoom_scale / 100
+        
         st.button("🔄 ล้างจุดวาด", on_click=lambda: st.session_state.update({"points": []}), use_container_width=True)
         if os.path.exists("mario.png"): st.image("mario.png", use_container_width=True)
         st.markdown("""
@@ -501,27 +512,38 @@ with tab_map:
             <b>🎮 วิธีเล่น (How to Play)</b><br>
             1. <b>วาด:</b> คลิกบนแผนที่ 4 จุดเพื่อสร้างโซน<br>
             2. <b>จัดการ:</b> คลิกในกรอบแดงเพื่อเพิ่ม 🎒อุปกรณ์ หรือ 🧹กิจกรรม<br>
+            3. <b>ซูม:</b> ถ้าจิ้มไม่โดน ให้เลื่อน Zoom ด้านบนครับ<br>
         </div>
         """, unsafe_allow_html=True)
 
     with col_display:
         try:
             img = Image.open("map.png")
-            w, h = img.size
+            orig_w, orig_h = img.size
             draw = ImageDraw.Draw(img)
+            
+            # วาดโซนทั้งหมด
             for p in all_plans:
                 c = p.get('coords', {}).get('points', [])
                 if c:
-                    poly = [(float(pt['x'].replace('%',''))*w/100, float(pt['y'].replace('%',''))*h/100) for pt in c]
+                    poly = [(float(pt['x'].replace('%',''))*orig_w/100, float(pt['y'].replace('%',''))*orig_h/100) for pt in c]
                     draw.polygon(poly, outline="#E4000F", width=10)
                     draw.text((poly[0][0], poly[0][1] - 35), f" {p['zone_name']}", fill="#F8B800", font_size=28, stroke_width=3, stroke_fill="black")
             
+            # วาดจุดเหลืองที่กำลังเลือก
             if "points" not in st.session_state: st.session_state.points = []
             for p in st.session_state.points:
                 draw.ellipse((p[0]-15, p[1]-15, p[0]+15, p[1]+15), fill="#F8B800", outline="white")
             
-            click = streamlit_image_coordinates(img, key="m_map", width=None)
-        except: st.error("ไม่พบไฟล์ map.png")
+            # แสดงแผนที่พร้อม Zoom Factor (สำคัญ: key ต้องเปลี่ยนตาม zoom)
+            raw_click = streamlit_image_coordinates(img, key=f"m_map_{zoom_scale}", width=int(orig_w * zoom_factor))
+            
+            # แปลงพิกัดกลับเป็นขนาดจริงเพื่อความแม่นยำ
+            click = None
+            if raw_click:
+                click = {"x": raw_click["x"] / zoom_factor, "y": raw_click["y"] / zoom_factor}
+                
+        except: st.error("ไม่พบไฟล์ map.png กรุณาอัปโหลดรูปแผนที่")
 
 # --- 5. LOGIC ---
 if click:
@@ -532,7 +554,7 @@ if click:
         for p in all_plans:
             c = p.get('coords', {}).get('points', [])
             if c:
-                poly = [(float(pt['x'].replace('%',''))*w/100, float(pt['y'].replace('%',''))*h/100) for pt in c]
+                poly = [(float(pt['x'].replace('%',''))*orig_w/100, float(pt['y'].replace('%',''))*orig_h/100) for pt in c]
                 if is_inside(cx, cy, poly): 
                     target = p
                     break
@@ -548,7 +570,7 @@ if click:
                     st.session_state.points = [] 
                     st.rerun()
                 else:
-                    create_zone_dialog(st.session_state.points, w, h)
+                    create_zone_dialog(st.session_state.points, orig_w, orig_h)
                     st.stop()
             else:
                 st.rerun()
