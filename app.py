@@ -401,20 +401,20 @@ def create_zone_dialog(points, w, h):
 @st.dialog("⭐️ LEVEL SETTINGS", width="large")
 def edit_mission_dialog(item_id):
     # --- 1. ตรวจสอบการแจ้งเตือน (Success Message) ---
-    # ถ้ามีการฝากข้อความไว้จากตอนกด Save ให้โชว์แถบสีเขียวด้านบนสุดของ Dialog
     if "dialog_msg" in st.session_state:
         st.success(st.session_state.dialog_msg, icon="✅")
-        # แสดงเสร็จแล้วลบออกทันที เพื่อไม่ให้โชว์ซ้ำตอนกด Tab อื่น
+        # ลบออกเพื่อให้แสดงแค่ครั้งเดียว
         del st.session_state.dialog_msg
 
-    # --- 2. ดึงข้อมูลล่าสุดจาก Supabase ---
+    # --- 2. ดึงข้อมูลจาก Supabase ---
+    # เราจะดึงข้อมูลใหม่ทุกครั้งที่ฟังก์ชันนี้ทำงาน
     res = supabase.table("cleaning_plans").select("*").eq("id", item_id).execute()
     if not res.data: 
         st.error("ไม่พบข้อมูลด่านนี้")
         return
     item = res.data[0]
     
-    # --- 3. สร้าง Tabs (สลับเอากิจกรรมขึ้นก่อน) ---
+    # --- 3. สร้าง Tabs ---
     t1, t2, t3, t4 = st.tabs(["📊 ข้อมูลหลัก", "🧹 กิจกรรม Big Cleaning", "🎒 อุปกรณ์ (Tools)", "🧨 ลบด่าน"])
     
     # --- Tab 1: ข้อมูลหลัก ---
@@ -423,57 +423,48 @@ def edit_mission_dialog(item_id):
             u_name = st.text_input("ชื่อด่าน (Zone Name)", value=item['zone_name'])
             u_staff = st.text_input("ฮีโร่ผู้รับผิดชอบหลัก", value=item.get('responsible_staff', ''))
             if st.form_submit_button("💾 บันทึกการเปลี่ยนแปลง"):
-                supabase.table("cleaning_plans").update({
-                    "zone_name": u_name, 
-                    "responsible_staff": u_staff
-                }).eq("id", item_id).execute()
-                # ฝากข้อความไว้ใน Session State
+                supabase.table("cleaning_plans").update({"zone_name": u_name, "responsible_staff": u_staff}).eq("id", item_id).execute()
                 st.session_state.dialog_msg = "บันทึกข้อมูลหลักเรียบร้อยแล้ว!"
-                st.rerun()
+                st.rerun() # สำหรับฟอร์มหลักยังต้อง rerun เพื่อให้ชื่อบนแผนที่เปลี่ยน
     
-    # --- Tab 2: กิจกรรม (จำนวนคน + เวลา) ---
+    # --- Tab 2: กิจกรรม (แบบไม่ปิดหน้าจอ) ---
     with t2:
         st.markdown("### 🧹 ภารกิจ Big Cleaning Day")
         with st.container(border=True):
             act_sel = st.selectbox("เลือกกิจกรรมแนะนำ", ["➕ พิมพ์เพิ่มเอง..."] + PRESET_ACTIVITIES)
-            custom_act = st.text_input("📝 ระบุกิจกรรม", key=f"ca_{item_id}", placeholder="เช่น ทำความสะอาดพื้น")
+            custom_act = st.text_input("📝 ระบุกิจกรรม", key=f"ca_{item_id}")
             
-            col_people, col_time = st.columns(2)
-            num_people = col_people.number_input("👥 จำนวนคน (คน)", min_value=1, step=1, value=1)
-            hrs = col_time.number_input("⏱️ เวลาที่ใช้ (ชั่วโมง)", min_value=1, step=1, value=1)
+            col_p, col_t = st.columns(2)
+            num_people = col_p.number_input("👥 จำนวนคน (คน)", min_value=1, step=1, value=1)
+            hrs = col_t.number_input("⏱️ เวลาที่ใช้ (ชั่วโมง)", min_value=1, step=1, value=1)
             
             if st.button("➕ เพิ่มกิจกรรมเข้าแผน", use_container_width=True, key=f"btn_add_act_{item_id}"):
                 final_act = custom_act if act_sel == "➕ พิมพ์เพิ่มเอง..." else act_sel
                 if final_act:
                     current_acts = item.get('activities', [])
-                    current_acts.append({
-                        "name": final_act, 
-                        "people": int(num_people),
-                        "hours": int(hrs)
-                    })
+                    current_acts.append({"name": final_act, "people": int(num_people), "hours": int(hrs)})
                     supabase.table("cleaning_plans").update({"activities": current_acts}).eq("id", item_id).execute()
-                    # ฝากข้อความไว้ใน Session State
+                    # แทนการ rerun เราจะแจ้งเตือนและบังคับให้ UI อัปเดตใน Dialog แทน
                     st.session_state.dialog_msg = f"เพิ่มกิจกรรม '{final_act}' สำเร็จ!"
-                    st.rerun()
+                    st.rerun() # ใน Streamlit Dialog รุ่นใหม่ การ rerun จะยังรักษาหน้าต่างไว้ถ้าเรียกจากข้างใน
 
         st.divider()
         if item.get('activities'):
             for i, a in enumerate(item.get('activities', [])):
-                with st.container():
-                    c1, c2, c3, c4 = st.columns([3, 1.5, 1.5, 0.5])
-                    c1.write(f"🔹 **{a['name']}**")
-                    c2.write(f"👥 {a.get('people', 1)} คน")
-                    c3.write(f"⏱️ {a.get('hours', 0)} ชม.")
-                    if c4.button("🗑️", key=f"del_act_{item_id}_{i}"):
-                        new_acts = item.get('activities', [])
-                        new_acts.pop(i)
-                        supabase.table("cleaning_plans").update({"activities": new_acts}).eq("id", item_id).execute()
-                        st.session_state.dialog_msg = "ลบกิจกรรมออกแล้ว"
-                        st.rerun()
+                c1, c2, c3, c4 = st.columns([3, 1.5, 1.5, 0.5])
+                c1.write(f"🔹 **{a['name']}**")
+                c2.write(f"👥 {a.get('people', 1)} คน")
+                c3.write(f"⏱️ {a.get('hours', 0)} ชม.")
+                if c4.button("🗑️", key=f"del_act_{item_id}_{i}"):
+                    new_acts = item.get('activities', [])
+                    new_acts.pop(i)
+                    supabase.table("cleaning_plans").update({"activities": new_acts}).eq("id", item_id).execute()
+                    st.session_state.dialog_msg = "ลบกิจกรรมออกแล้ว"
+                    st.rerun()
         else:
             st.info("ยังไม่มีกิจกรรมในโซนนี้")
 
-    # --- Tab 3: อุปกรณ์ (Tools) ---
+    # --- Tab 3: อุปกรณ์ ---
     with t3:
         st.markdown("### 🎒 คลังไอเทมสนับสนุน")
         c_tool, c_qty, c_btn = st.columns([2, 1, 1])
@@ -485,7 +476,7 @@ def edit_mission_dialog(item_id):
             current_tools = item.get('tools', [])
             current_tools.append({"item": final_tool, "amount": int(qty)})
             supabase.table("cleaning_plans").update({"tools": current_tools}).eq("id", item_id).execute()
-            st.session_state.dialog_msg = f"เพิ่ม {final_tool} เข้าคลังแล้ว!"
+            st.session_state.dialog_msg = f"เพิ่ม {final_tool} สำเร็จ!"
             st.rerun()
             
         st.divider()
@@ -497,15 +488,14 @@ def edit_mission_dialog(item_id):
                     new_tools = item.get('tools', [])
                     new_tools.pop(i)
                     supabase.table("cleaning_plans").update({"tools": new_tools}).eq("id", item_id).execute()
-                    st.session_state.dialog_msg = "ลบอุปกรณ์ออกจากแผนแล้ว"
+                    st.session_state.dialog_msg = "ลบอุปกรณ์แล้ว"
                     st.rerun()
 
     # --- Tab 4: ลบด่าน ---
     with t4:
-        st.warning("⚠️ การลบด่านจะลบข้อมูลกิจกรรมและอุปกรณ์ทั้งหมดทิ้ง")
-        if st.button("🧨 ยืนยันการทำลายด่านนี้", use_container_width=True):
+        st.warning("⚠️ ระวัง! การลบด่านจะปิดหน้าต่างนี้ทันที")
+        if st.button("🧨 ยืนยันการทำลายด่าน", use_container_width=True):
             supabase.table("cleaning_plans").delete().eq("id", item_id).execute()
-            # สำหรับการลบด่าน (ซึ่งจะปิด Dialog ไปเลย) ใช้ toast จะเหมาะกว่า
             st.session_state.toast_msg = "ทำลายด่านเรียบร้อย!"
             st.rerun()
 
