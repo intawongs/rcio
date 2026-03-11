@@ -208,85 +208,25 @@ with tab_map:
     # แต่บน Desktop มันจะอยู่ซ้าย-ขวา ตามสัดส่วน [1.5, 5]
     col_info, col_display = st.columns([1.5, 5])
     
-    # with col_info:
-    #     # --- 1. ปุ่มและรูปมาริโอ้ (จะอยู่ด้านบนในมือถือ) ---
-    #     st.button("🔄 ล้างจุดวาด", on_click=lambda: st.session_state.update({"points": []}), use_container_width=True)
-        
-    #     if os.path.exists("mario.png"):
-    #         st.image("mario.png", use_container_width=True)
-            
-    #     st.markdown("""
-    #     <div class="how-to-play">
-    #         <b>🎮 วิธีเล่น (How to Play)</b><br>
-    #         1. <b>กำหนดพื้นที่:</b> คลิกบนแผนที่ <b>4 จุด</b> เพื่อวาดกรอบพื้นที่<br>
-    #         2. <b>แก้ไขข้อมูล/จัดการอุปกรณ์:</b> คลิกที่ <b>กรอบสีแดง</b> <br>
-    #         3. <b>รีเซ็ต:</b> กด <b>'ล้างจุดวาด'</b> หากต้องการเริ่มใหม่ <br>
-    #         * <b>'พื้นที่ตั้งชื่อเป็นภาษาอังกฤษเท่านั้น'</b> <br>
-    #         * <b>'กำหนดพื้นที่ห้ามทับซ้อนกัน'</b> <br>
-    #         * <b>'กำหนดพื้นที่ต้องเป็นสี่เหลี่ยม'</b>
-    #     </div>
-    #     """, unsafe_allow_html=True)
     with col_info:
-        # --- 1. ปุ่มและรูปมาริโอ้ ---
+        # --- 1. ปุ่มและรูปมาริโอ้ (จะอยู่ด้านบนในมือถือ) ---
         st.button("🔄 ล้างจุดวาด", on_click=lambda: st.session_state.update({"points": []}), use_container_width=True)
         
         if os.path.exists("mario.png"):
             st.image("mario.png", use_container_width=True)
             
-        # --- 2. [ใหม่] รายชื่อพื้นที่ภาษาไทย ---
-        st.markdown("### 🗺️ รายชื่อพื้นที่")
-        if all_plans:
-            for i, p in enumerate(all_plans):
-                # แสดงเลขลำดับพร้อมชื่อพื้นที่ภาษาไทย
-                st.success(f"**{i+1}.** {p['zone_name']}")
-        else:
-            st.info("ยังไม่มีการลงทะเบียนพื้นที่")
-
-        # --- 3. วิธีเล่น (ปรับปรุงใหม่) ---
         st.markdown("""
         <div class="how-to-play">
             <b>🎮 วิธีเล่น (How to Play)</b><br>
             1. <b>กำหนดพื้นที่:</b> คลิกบนแผนที่ <b>4 จุด</b> เพื่อวาดกรอบพื้นที่<br>
-            2. <b>จัดการด่าน:</b> คลิกที่ <b>กรอบหมายเลข</b> เพื่อเพิ่มอุปกรณ์<br>
-            3. <b>รีเซ็ต:</b> กด <b>'ล้างจุดวาด'</b> หากต้องการเริ่มใหม่<br>
-            <hr style="margin: 10px 0; border: 0.5px solid #ddd;">
-            ✅ <b>พิมพ์ภาษาไทยได้ 100%</b><br>
-            ⚠️ <b>กำหนดพื้นที่ห้ามทับซ้อนกัน</b><br>
-            ⚠️ <b>ต้องวาดเป็นรูปทรงสี่เหลี่ยม (ห้ามเส้นตัดกัน)</b>
+            2. <b>แก้ไขข้อมูล/จัดการอุปกรณ์:</b> คลิกที่ <b>กรอบสีแดง</b> <br>
+            3. <b>รีเซ็ต:</b> กด <b>'ล้างจุดวาด'</b> หากต้องการเริ่มใหม่ <br>
+            * <b>'พื้นที่ตั้งชื่อเป็นภาษาอังกฤษเท่านั้น'</b> <br>
+            * <b>'กำหนดพื้นที่ห้ามทับซ้อนกัน'</b> <br>
+            * <b>'กำหนดพื้นที่ต้องเป็นสี่เหลี่ยม'</b>
         </div>
         """, unsafe_allow_html=True)
 
-    # with col_display:
-    #     # --- 2. แผนที่ (จะอยู่ถัดลงมาในมือถือ) ---
-    #     try:
-    #         img = Image.open("map.png")
-    #         w, h = img.size
-    #         draw = ImageDraw.Draw(img)
-            
-    #         # วาดเส้นและชื่อด่าน (ใช้แบบตัดขอบดำตามที่แก้ไปก่อนหน้า)
-    #         for p in all_plans:
-    #             c = p.get('coords', {}).get('points', [])
-    #             if c:
-    #                 poly = [(float(pt['x'].replace('%',''))*w/100, float(pt['y'].replace('%',''))*h/100) for pt in c]
-    #                 draw.polygon(poly, outline="#E4000F", width=10)
-    #                 draw.text(
-    #                     (poly[0][0], poly[0][1] - 35), 
-    #                     f" {p['zone_name']}", 
-    #                     fill="#F8B800", 
-    #                     font_size=28, 
-    #                     stroke_width=3, 
-    #                     stroke_fill="black"
-    #                 )
-            
-    #         # วาดจุดเหลืองที่กำลังเลือก
-    #         if "points" not in st.session_state: st.session_state.points = []
-    #         for p in st.session_state.points:
-    #             draw.ellipse((p[0]-15, p[1]-15, p[0]+15, p[1]+15), fill="#F8B800", outline="white")
-            
-    #         # แสดงแผนที่
-    #         click = streamlit_image_coordinates(img, key="m_map", width=None)
-    #     except:
-    #         st.error("ไม่พบไฟล์ map.png")
     with col_display:
         # --- 2. แผนที่ (จะอยู่ถัดลงมาในมือถือ) ---
         try:
@@ -294,24 +234,18 @@ with tab_map:
             w, h = img.size
             draw = ImageDraw.Draw(img)
             
-            # วาดเส้นและ "หมายเลขลำดับ" แทนชื่อภาษาไทย
-            # ใช้ enumerate เพื่อดึงตัวเลข i (เริ่มจาก 0, 1, 2...) มาสร้างเป็นเลขลำดับ
-            for i, p in enumerate(all_plans):
+            # วาดเส้นและชื่อด่าน (ใช้แบบตัดขอบดำตามที่แก้ไปก่อนหน้า)
+            for p in all_plans:
                 c = p.get('coords', {}).get('points', [])
                 if c:
                     poly = [(float(pt['x'].replace('%',''))*w/100, float(pt['y'].replace('%',''))*h/100) for pt in c]
-                    
-                    # วาดกรอบสีแดง
                     draw.polygon(poly, outline="#E4000F", width=10)
-                    
-                    # เปลี่ยนจากวาดชื่อ มาเป็นวาด "หมายเลข" (1, 2, 3...)
-                    # วางไว้ตำแหน่งเดียวกับชื่อเดิม แต่ตัวเลขจะไม่มีปัญหาเรื่องฟอนต์ภาษาไทย
                     draw.text(
-                        (poly[0][0] + 5, poly[0][1] + 5), 
-                        str(i + 1),            # แสดงเลขลำดับ (บวก 1 เพื่อเริ่มที่เลข 1)
-                        fill="white", 
-                        font_size=50,          # ปรับขนาดตัวเลขให้ใหญ่ชัดเจน
-                        stroke_width=4, 
+                        (poly[0][0], poly[0][1] - 35), 
+                        f" {p['zone_name']}", 
+                        fill="#F8B800", 
+                        font_size=28, 
+                        stroke_width=3, 
                         stroke_fill="black"
                     )
             
@@ -322,8 +256,8 @@ with tab_map:
             
             # แสดงแผนที่
             click = streamlit_image_coordinates(img, key="m_map", width=None)
-        except Exception as e:
-            st.error(f"เกิดข้อผิดพลาดในการโหลดแผนที่: {e}")
+        except:
+            st.error("ไม่พบไฟล์ map.png")
 
 # with tab_map:
 #     col_left, col_right = st.columns([5, 1.5])
