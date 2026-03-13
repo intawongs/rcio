@@ -658,9 +658,75 @@ def create_zone_dialog(points, w, h):
             supabase.table("cleaning_plans").insert({"zone_name": z, "dept": final_dept, "responsible_staff": staff, "coords": {"points": p_pct}, "tools": [], "activities": []}).execute()
             st.session_state.points = []; st.session_state.success_msg = "🏰 สร้างสำเร็จ!"; st.rerun()
 
+# @st.dialog("⭐️ LEVEL SETTINGS", width="large")
+# def edit_mission_dialog(item_id):
+#     # โหลดข้อมูลเข้า Temp ครั้งแรก
+#     if f"temp_init_{item_id}" not in st.session_state:
+#         res = supabase.table("cleaning_plans").select("*").eq("id", item_id).execute()
+#         if res.data:
+#             item = res.data[0]
+#             st.session_state[f"temp_acts_{item_id}"] = item.get('activities', [])
+#             st.session_state[f"temp_tools_{item_id}"] = item.get('tools', [])
+#             st.session_state[f"temp_name_{item_id}"] = item['zone_name']
+#             st.session_state[f"temp_staff_{item_id}"] = item.get('responsible_staff', '')
+#             st.session_state[f"temp_init_{item_id}"] = True
+
+#     t1, t2, t3, t4 = st.tabs(["📊 ข้อมูลหลัก", "🧹 กิจกรรม", "🎒 อุปกรณ์", "🧨 ลบด่าน"])
+    
+#     with t1:
+#         st.session_state[f"temp_name_{item_id}"] = st.text_input("ชื่อด่าน", value=st.session_state[f"temp_name_{item_id}"])
+#         st.session_state[f"temp_staff_{item_id}"] = st.text_input("ฮีโร่", value=st.session_state[f"temp_staff_{item_id}"])
+
+#     with t2:
+#         st.markdown("### 🧹 ภารกิจ (เพิ่มได้เรื่อยๆ)")
+#         a_sel = st.selectbox("กิจกรรม", ["➕ พิมพ์เอง..."] + PRESET_ACTIVITIES, key=f"asel_{item_id}")
+#         a_cust = st.text_input("ระบุกิจกรรม", key=f"acust_{item_id}")
+#         c1, c2 = st.columns(2); n_p = c1.number_input("คน", 1, 50, 1, key=f"np_{item_id}"); n_h = c2.number_input("ชม.", 1, 50, 1, key=f"nh_{item_id}")
+        
+#         # แก้ปัญหา Popup ปิด: ใช้ on_click เพื่อรันเฉพาะกิจ
+#         def add_act():
+#             name = a_cust if a_sel == "➕ พิมพ์เอง..." else a_sel
+#             if name: st.session_state[f"temp_acts_{item_id}"].append({"name": name, "people": n_p, "hours": n_h})
+        
+#         st.button("➕ เพิ่มลงตะกร้า", use_container_width=True, on_click=add_act)
+
+#         for i, a in enumerate(st.session_state[f"temp_acts_{item_id}"]):
+#             cols = st.columns([3, 1, 1, 0.5])
+#             cols[0].write(f"🔹 {a['name']}"); cols[1].write(f"👥{a['people']}"); cols[2].write(f"⏱️{a['hours']}")
+#             if cols[3].button("🗑️", key=f"da_{item_id}_{i}"):
+#                 st.session_state[f"temp_acts_{item_id}"].pop(i); st.rerun()
+
+#     with t3:
+#         st.markdown("### 🎒 อุปกรณ์")
+#         t_sel = st.selectbox("ไอเทม", MASTER_TOOLS + ["➕ พิมพ์เอง..."], key=f"tsel_{item_id}")
+#         t_qty = st.number_input("จำนวน", 1, 100, 1, key=f"tq_{item_id}")
+        
+#         def add_tool():
+#             st.session_state[f"temp_tools_{item_id}"].append({"item": t_sel, "amount": t_qty})
+        
+#         st.button("➕ เพิ่มเข้าเป้", use_container_width=True, on_click=add_tool)
+        
+#         for i, t in enumerate(st.session_state[f"temp_tools_{item_id}"]):
+#             cols = st.columns([4, 1, 0.5])
+#             cols[0].write(f"📦 {t['item']}"); cols[1].write(f"x{t['amount']}")
+#             if cols[2].button("🗑️", key=f"dt_{item_id}_{i}"):
+#                 st.session_state[f"temp_tools_{item_id}"].pop(i); st.rerun()
+
+#     st.divider()
+#     if st.button("💾 บันทึกทุกอย่างลงฐานข้อมูล", type="primary", use_container_width=True):
+#         supabase.table("cleaning_plans").update({"zone_name": st.session_state[f"temp_name_{item_id}"], "responsible_staff": st.session_state[f"temp_staff_{item_id}"], "activities": st.session_state[f"temp_acts_{item_id}"], "tools": st.session_state[f"temp_tools_{item_id}"]}).eq("id", item_id).execute()
+#         for k in [f"temp_init_{item_id}", f"temp_acts_{item_id}", f"temp_tools_{item_id}", f"temp_name_{item_id}", f"temp_staff_{item_id}"]:
+#             if k in st.session_state: del st.session_state[k]
+#         st.session_state.success_msg = "✅ บันทึกสำเร็จ!"; st.rerun()
+
+#     with t4:
+#         if st.button("🧨 ยืนยันลบด่าน", use_container_width=True):
+#             supabase.table("cleaning_plans").delete().eq("id", item_id).execute()
+#             st.session_state.success_msg = "🧨 ลบแล้ว"; st.rerun()
+
 @st.dialog("⭐️ LEVEL SETTINGS", width="large")
 def edit_mission_dialog(item_id):
-    # โหลดข้อมูลเข้า Temp ครั้งแรก
+    # 1. โหลดข้อมูลเข้า Temp ครั้งแรก (คงเดิม)
     if f"temp_init_{item_id}" not in st.session_state:
         res = supabase.table("cleaning_plans").select("*").eq("id", item_id).execute()
         if res.data:
@@ -678,51 +744,76 @@ def edit_mission_dialog(item_id):
         st.session_state[f"temp_staff_{item_id}"] = st.text_input("ฮีโร่", value=st.session_state[f"temp_staff_{item_id}"])
 
     with t2:
-        st.markdown("### 🧹 ภารกิจ (เพิ่มได้เรื่อยๆ)")
+        st.markdown("### 🧹 ภารกิจ (เพิ่ม/ลบ ได้ต่อเนื่อง)")
         a_sel = st.selectbox("กิจกรรม", ["➕ พิมพ์เอง..."] + PRESET_ACTIVITIES, key=f"asel_{item_id}")
         a_cust = st.text_input("ระบุกิจกรรม", key=f"acust_{item_id}")
-        c1, c2 = st.columns(2); n_p = c1.number_input("คน", 1, 50, 1, key=f"np_{item_id}"); n_h = c2.number_input("ชม.", 1, 50, 1, key=f"nh_{item_id}")
+        c1, c2 = st.columns(2)
+        n_p = c1.number_input("คน", 1, 50, 1, key=f"np_{item_id}")
+        n_h = c2.number_input("ชม.", 1, 50, 1, key=f"nh_{item_id}")
         
-        # แก้ปัญหา Popup ปิด: ใช้ on_click เพื่อรันเฉพาะกิจ
+        # ฟังก์ชันเพิ่ม (ไม่ปิด Popup)
         def add_act():
             name = a_cust if a_sel == "➕ พิมพ์เอง..." else a_sel
             if name: st.session_state[f"temp_acts_{item_id}"].append({"name": name, "people": n_p, "hours": n_h})
         
+        # ฟังก์ชันลบ (ไม่ปิด Popup) - รับค่า index มาลบ
+        def del_act(idx):
+            st.session_state[f"temp_acts_{item_id}"].pop(idx)
+
         st.button("➕ เพิ่มลงตะกร้า", use_container_width=True, on_click=add_act)
 
+        st.divider()
         for i, a in enumerate(st.session_state[f"temp_acts_{item_id}"]):
             cols = st.columns([3, 1, 1, 0.5])
-            cols[0].write(f"🔹 {a['name']}"); cols[1].write(f"👥{a['people']}"); cols[2].write(f"⏱️{a['hours']}")
-            if cols[3].button("🗑️", key=f"da_{item_id}_{i}"):
-                st.session_state[f"temp_acts_{item_id}"].pop(i); st.rerun()
+            cols[0].write(f"🔹 {a['name']}")
+            cols[1].write(f"👥{a['people']}")
+            cols[2].write(f"⏱️{a['hours']}")
+            # ใช้ on_click และส่ง args เป็นลำดับที่ต้องการลบ
+            cols[3].button("🗑️", key=f"da_{item_id}_{i}", on_click=del_act, args=(i,))
 
     with t3:
         st.markdown("### 🎒 อุปกรณ์")
         t_sel = st.selectbox("ไอเทม", MASTER_TOOLS + ["➕ พิมพ์เอง..."], key=f"tsel_{item_id}")
         t_qty = st.number_input("จำนวน", 1, 100, 1, key=f"tq_{item_id}")
         
+        # ฟังก์ชันเพิ่มอุปกรณ์
         def add_tool():
             st.session_state[f"temp_tools_{item_id}"].append({"item": t_sel, "amount": t_qty})
         
+        # ฟังก์ชันลบอุปกรณ์
+        def del_tool(idx):
+            st.session_state[f"temp_tools_{item_id}"].pop(idx)
+        
         st.button("➕ เพิ่มเข้าเป้", use_container_width=True, on_click=add_tool)
         
+        st.divider()
         for i, t in enumerate(st.session_state[f"temp_tools_{item_id}"]):
             cols = st.columns([4, 1, 0.5])
-            cols[0].write(f"📦 {t['item']}"); cols[1].write(f"x{t['amount']}")
-            if cols[2].button("🗑️", key=f"dt_{item_id}_{i}"):
-                st.session_state[f"temp_tools_{item_id}"].pop(i); st.rerun()
+            cols[0].write(f"📦 {t['item']}")
+            cols[1].write(f"x{t['amount']}")
+            cols[2].button("🗑️", key=f"dt_{item_id}_{i}", on_click=del_tool, args=(i,))
 
     st.divider()
+    # ปุ่มบันทึกหลัก (ปุ่มนี้ปุ่มเดียวที่ยอมให้ปิด Popup เพื่ออัปเดตหน้าจอหลัก)
     if st.button("💾 บันทึกทุกอย่างลงฐานข้อมูล", type="primary", use_container_width=True):
-        supabase.table("cleaning_plans").update({"zone_name": st.session_state[f"temp_name_{item_id}"], "responsible_staff": st.session_state[f"temp_staff_{item_id}"], "activities": st.session_state[f"temp_acts_{item_id}"], "tools": st.session_state[f"temp_tools_{item_id}"]}).eq("id", item_id).execute()
+        supabase.table("cleaning_plans").update({
+            "zone_name": st.session_state[f"temp_name_{item_id}"],
+            "responsible_staff": st.session_state[f"temp_staff_{item_id}"],
+            "activities": st.session_state[f"temp_acts_{item_id}"],
+            "tools": st.session_state[f"temp_tools_{item_id}"]
+        }).eq("id", item_id).execute()
+        
+        # ล้าง State ทิ้ง
         for k in [f"temp_init_{item_id}", f"temp_acts_{item_id}", f"temp_tools_{item_id}", f"temp_name_{item_id}", f"temp_staff_{item_id}"]:
             if k in st.session_state: del st.session_state[k]
-        st.session_state.success_msg = "✅ บันทึกสำเร็จ!"; st.rerun()
+        
+        st.session_state.success_msg = "✅ บันทึก Mission สำเร็จ!"
+        st.rerun()
 
     with t4:
         if st.button("🧨 ยืนยันลบด่าน", use_container_width=True):
             supabase.table("cleaning_plans").delete().eq("id", item_id).execute()
-            st.session_state.success_msg = "🧨 ลบแล้ว"; st.rerun()
+            st.session_state.success_msg = "🧨 ลบด่านเรียบร้อย"; st.rerun()
 
 # --- 4. MAIN LAYOUT ---
 st.markdown("<h1>SUPER 5S WORLD</h1>", unsafe_allow_html=True)
