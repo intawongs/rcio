@@ -546,75 +546,35 @@ with tab_map:
         except: st.error("ไม่พบไฟล์ map.png กรุณาอัปโหลดรูปแผนที่")
 
 # --- 5. LOGIC ---
-# if click:
-#     cx, cy = click["x"], click["y"]
-#     if "last_c" not in st.session_state or st.session_state.last_c != (cx, cy):
-#         st.session_state.last_c = (cx, cy)
-#         target = None
-#         for p in all_plans:
-#             c = p.get('coords', {}).get('points', [])
-#             if c:
-#                 poly = [(float(pt['x'].replace('%',''))*orig_w/100, float(pt['y'].replace('%',''))*orig_h/100) for pt in c]
-#                 if is_inside(cx, cy, poly): 
-#                     target = p
-#                     break
-        
-#         if target: 
-#             edit_mission_dialog(target['id'])
-#             st.stop() 
-#         else:
-#             st.session_state.points.append((cx, cy))
-#             if len(st.session_state.points) == 4:
-#                 if not is_convex(st.session_state.points):
-#                     st.toast("⚠️ เส้นห้ามตัดกัน!", icon="🧨")
-#                     st.session_state.points = [] 
-#                     st.rerun()
-#                 else:
-#                     create_zone_dialog(st.session_state.points, orig_w, orig_h)
-#                     st.stop()
-#             else:
-#                 st.rerun()
-# --- 5. LOGIC (เวอร์ชัน High Performance) ---
 if click:
     cx, cy = click["x"], click["y"]
-    
-    # เช็คเบื้องต้นว่าคลิกซ้ำจุดเดิมจากจังหวะ Rerun ไหม
-    if st.session_state.get("last_c") != (cx, cy):
+    if "last_c" not in st.session_state or st.session_state.last_c != (cx, cy):
         st.session_state.last_c = (cx, cy)
+        target = None
+        for p in all_plans:
+            c = p.get('coords', {}).get('points', [])
+            if c:
+                poly = [(float(pt['x'].replace('%',''))*orig_w/100, float(pt['y'].replace('%',''))*orig_h/100) for pt in c]
+                if is_inside(cx, cy, poly): 
+                    target = p
+                    break
         
-        # 1. เช็คก่อนว่าเรากำลัง "วาดค้างไว้" หรือไม่?
-        # ถ้ามีจุดที่จิ้มค้างไว้ 1-3 จุด ให้เน้นไปที่การวาดต่อทันที (ลดการวนลูปเช็คด่านอื่น)
-        if 0 < len(st.session_state.points) < 4:
+        if target: 
+            edit_mission_dialog(target['id'])
+            st.stop() 
+        else:
             st.session_state.points.append((cx, cy))
             if len(st.session_state.points) == 4:
-                # ตรวจสอบเส้นตัดเฉพาะตอนครบ 4 จุด
                 if not is_convex(st.session_state.points):
                     st.toast("⚠️ เส้นห้ามตัดกัน!", icon="🧨")
-                    st.session_state.points = []
+                    st.session_state.points = [] 
+                    st.rerun()
                 else:
-                    create_zone_dialog(st.session_state.points, orig_w, orig_h, real_w)
+                    create_zone_dialog(st.session_state.points, orig_w, orig_h)
                     st.stop()
-            st.rerun()
-
-        # 2. ถ้าไม่ได้วาดค้างไว้ (points ว่าง) ค่อยเช็คว่าคลิกโดน "ด่านที่มีอยู่แล้ว" ไหม
-        else:
-            target = None
-            # วนลูปเช็คเฉพาะตอนที่ไม่ได้อยู่ในโหมดวาด ช่วยลดความหน่วงได้เยอะ
-            for p in all_plans:
-                c = p.get('coords', {}).get('points', [])
-                if c:
-                    poly = [(float(pt['x'].replace('%',''))*orig_w/100, float(pt['y'].replace('%',''))*orig_h/100) for pt in c]
-                    if is_inside(cx, cy, poly): 
-                        target = p
-                        break
-            
-            if target: 
-                edit_mission_dialog(target['id'])
-                st.stop()
             else:
-                # ถ้าไม่โดนด่านไหนเลย ให้เริ่มนับเป็นจุดที่ 1 สำหรับการวาดใหม่
-                st.session_state.points = [(cx, cy)]
                 st.rerun()
+
 
 with tab_score:
     if all_plans:
