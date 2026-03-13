@@ -732,12 +732,35 @@ with tab_map:
     all_plans = supabase.table("cleaning_plans").select("*").order("created_at", desc=True).execute().data
     col_info, col_display = st.columns([1.5, 5])
     
+    # with col_info:
+    #     zoom_scale = st.slider("Zoom (%)", 50, 250, 100, step=10, key="zoom_slider")
+    #     zoom_factor = zoom_scale / 100
+    #     if st.button("🔄 ล้างจุดวาด", use_container_width=True):
+    #         st.session_state.points = []; st.rerun()
+    #     if os.path.exists("mario.png"): st.image("mario.png")
+
     with col_info:
-        zoom_scale = st.slider("Zoom (%)", 50, 250, 100, step=10, key="zoom_slider")
+        # --- 🔍 ระบบ Zoom Scale ---
+        st.markdown("### 🔍 Zoom Scale")
+        zoom_scale = st.slider("ปรับขนาด (%)", 50, 250, 100, step=10, key="zoom_slider")
         zoom_factor = zoom_scale / 100
+        
         if st.button("🔄 ล้างจุดวาด", use_container_width=True):
-            st.session_state.points = []; st.rerun()
-        if os.path.exists("mario.png"): st.image("mario.png")
+            st.session_state.points = []
+            st.rerun()
+
+        if os.path.exists("mario.png"): 
+            st.image("mario.png", use_container_width=True)
+
+        # --- 🎮 คำอธิบายวิธีเล่น (ที่หายไป) ---
+        st.markdown("""
+        <div style="background-color: #F8B800; border: 3px solid #000; padding: 15px; border-radius: 10px; margin-top: 10px; font-size: 16px; color: #000; line-height: 1.6; box-shadow: 4px 4px 0px #000;">
+            <b>🎮 วิธีเล่น (How to Play)</b><br>
+            1. <b>วาด:</b> คลิกบนแผนที่ 4 จุดเพื่อสร้างโซนใหม่<br>
+            2. <b>จัดการ:</b> คลิกในโซนสีแดงเพื่อเพิ่ม 🎒อุปกรณ์ หรือ 🧹กิจกรรม<br>
+            3. <b>ประหยัดเวลา:</b> ในหน้าแก้ไข คุณสามารถกดเพิ่มกิจกรรมกี่อย่างก็ได้ แล้วค่อยกด <b>"บันทึกทั้งหมด"</b> ทีเดียวครับ
+        </div>
+        """, unsafe_allow_html=True)
 
     with col_display:
         try:
