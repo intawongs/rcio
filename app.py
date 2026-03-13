@@ -661,7 +661,7 @@ def create_zone_dialog(points, w, h):
 
 @st.dialog("⭐️ LEVEL SETTINGS", width="large")
 def edit_mission_dialog(item_id):
-    # ดึงข้อมูลมาเก็บใน Temp ครั้งแรก
+    # 1. โหลดข้อมูลเข้า Temp State (ทำครั้งเดียวตอนเปิด)
     if f"temp_init_{item_id}" not in st.session_state:
         res = supabase.table("cleaning_plans").select("*").eq("id", item_id).execute()
         if res.data:
@@ -676,57 +676,73 @@ def edit_mission_dialog(item_id):
     
     with t1:
         st.session_state[f"temp_name_{item_id}"] = st.text_input("ชื่อด่าน", value=st.session_state[f"temp_name_{item_id}"])
-        st.session_state[f"temp_staff_{item_id}"] = st.text_input("ฮีโร่", value=st.session_state[f"temp_staff_{item_id}"])
+        st.session_state[f"temp_staff_{item_id}"] = st.text_input("ฮีโร่ผู้รับผิดชอบ", value=st.session_state[f"temp_staff_{item_id}"])
 
     with t2:
-        st.markdown("### 🧹 ภารกิจ (เพิ่มได้เรื่อยๆ)")
-        with st.container(border=True):
-            a_sel = st.selectbox("กิจกรรม", ["➕ พิมพ์เอง..."] + PRESET_ACTIVITIES, key=f"asel_{item_id}")
-            a_cust = st.text_input("ระบุกิจกรรม", key=f"acust_{item_id}")
-            c1, c2 = st.columns(2)
-            n_p = c1.number_input("คน", 1, 100, 1, key=f"np_{item_id}")
-            n_h = c2.number_input("ชม.", 1, 100, 1, key=f"nh_{item_id}")
-            if st.button("➕ เพิ่มเข้าลิสต์ชั่วคราว", use_container_width=True):
-                name = a_cust if a_sel == "➕ พิมพ์เอง..." else a_sel
-                st.session_state[f"temp_acts_{item_id}"].append({"name": name, "people": n_p, "hours": n_h})
-                st.rerun() # rerun ภายใน dialog จะไม่ออกถ้าใช้ fragment คุมข้างนอก
+        st.markdown("### 🧹 ภารกิจ (เพิ่มได้ต่อเนื่อง)")
+        # ใช้ Key ที่ไม่ซ้ำเพื่อให้ Widget คงสถานะไว้
+        a_sel = st.selectbox("เลือกกิจกรรม", ["➕ พิมพ์เอง..."] + PRESET_ACTIVITIES, key=f"sel_{item_id}")
+        a_cust = st.text_input("ระบุกิจกรรมใหม่", key=f"cust_{item_id}")
+        c1, c2 = st.columns(2)
+        n_p = c1.number_input("จำนวนคน", 1, 50, 1, key=f"np_{item_id}")
+        n_h = c2.number_input("เวลา (ชม.)", 1, 50, 1, key=f"nh_{item_id}")
+        
+        # --- จุดสำคัญ: ปุ่มนี้ห้ามมี st.rerun() ---
+        if st.button("➕ เพิ่มลงรายการ (Popup ไม่ปิด)", use_container_width=True, key=f"add_act_btn_{item_id}"):
+            name = a_cust if a_sel == "➕ พิมพ์เอง..." else a_sel
+            if name:
+                # อัปเดต List ใน State ตรงๆ
+                st.session_state[f"temp_acts_{item_id}"].append({
+                    "name": name, "people": int(n_p), "hours": int(n_h)
+                })
+                st.toast(f"เพิ่ม {name} แล้ว! (รายการจะอัปเดตเมื่อขยับเม้าส์หรือกดบันทึก)")
 
+        # แสดงรายการที่เพิ่มแล้ว
+        st.markdown("---")
         for i, a in enumerate(st.session_state[f"temp_acts_{item_id}"]):
             cols = st.columns([3, 1, 1, 0.5])
-            cols[0].write(f"🔹 {a['name']}"); cols[1].write(f"👤{a['people']}"); cols[2].write(f"⏱️{a['hours']}")
-            if cols[3].button("🗑️", key=f"da_{item_id}_{i}"):
-                st.session_state[f"temp_acts_{item_id}"].pop(i); st.rerun()
+            cols[0].write(f"🔹 {a['name']}")
+            cols[1].write(f"👥{a['people']}")
+            cols[2].write(f"⏱️{a['hours']}")
+            if cols[3].button("🗑️", key=f"del_a_{item_id}_{i}"):
+                st.session_state[f"temp_acts_{item_id}"].pop(i)
+                st.rerun() # อนุโลมให้ rerun ตอนลบเพื่อให้รายการหายไปทันที
 
     with t3:
         st.markdown("### 🎒 อุปกรณ์")
-        with st.container(border=True):
-            t_sel = st.selectbox("ไอเทม", MASTER_TOOLS + ["➕ พิมพ์เอง..."], key=f"tsel_{item_id}")
-            t_qty = st.number_input("จำนวน", 1, 100, 1, key=f"tq_{item_id}")
-            if st.button("➕ เพิ่มเข้าเป้", use_container_width=True):
-                st.session_state[f"temp_tools_{item_id}"].append({"item": t_sel, "amount": t_qty})
-                st.rerun()
+        t_sel = st.selectbox("ไอเทม", MASTER_TOOLS + ["➕ พิมพ์เอง..."], key=f"ts_{item_id}")
+        t_qty = st.number_input("จำนวน", 1, 100, 1, key=f"tq_{item_id}")
+        if st.button("➕ เพิ่มอุปกรณ์", use_container_width=True, key=f"add_tool_btn_{item_id}"):
+            st.session_state[f"temp_tools_{item_id}"].append({"item": t_sel, "amount": int(t_qty)})
+            st.toast(f"เพิ่ม {t_sel} แล้ว!")
+
         for i, t in enumerate(st.session_state[f"temp_tools_{item_id}"]):
             cols = st.columns([4, 1, 0.5])
             cols[0].write(f"📦 {t['item']}"); cols[1].write(f"x{t['amount']}")
-            if cols[2].button("🗑️", key=f"dt_{item_id}_{i}"):
+            if cols[2].button("🗑️", key=f"del_t_{item_id}_{i}"):
                 st.session_state[f"temp_tools_{item_id}"].pop(i); st.rerun()
 
     st.divider()
-    if st.button("💾 บันทึกทุกอย่างลงฐานข้อมูล", type="primary", use_container_width=True):
+    # --- ปุ่มบันทึกไม้ตาย (กดทีเดียวส่ง Supabase และปิด Popup) ---
+    if st.button("💾 บันทึกทุกอย่างลงฐานข้อมูล (ปิดหน้าต่าง)", type="primary", use_container_width=True, key=f"save_all_{item_id}"):
         supabase.table("cleaning_plans").update({
             "zone_name": st.session_state[f"temp_name_{item_id}"],
             "responsible_staff": st.session_state[f"temp_staff_{item_id}"],
             "activities": st.session_state[f"temp_acts_{item_id}"],
             "tools": st.session_state[f"temp_tools_{item_id}"]
         }).eq("id", item_id).execute()
+        
+        # เคลียร์ State หลังบันทึก
         for k in [f"temp_init_{item_id}", f"temp_acts_{item_id}", f"temp_tools_{item_id}", f"temp_name_{item_id}", f"temp_staff_{item_id}"]:
             if k in st.session_state: del st.session_state[k]
-        st.session_state.success_msg = "✅ บันทึกสำเร็จ!"; st.rerun()
+        
+        st.session_state.success_msg = "✅ บันทึก Mission ทั้งหมดสำเร็จ!"
+        st.rerun()
 
     with t4:
-        if st.button("🧨 ยืนยันลบด่าน", use_container_width=True):
+        if st.button("🧨 ยืนยันการลบด่าน", use_container_width=True, key=f"final_del_{item_id}"):
             supabase.table("cleaning_plans").delete().eq("id", item_id).execute()
-            st.session_state.success_msg = "🧨 ลบแล้ว"; st.rerun()
+            st.session_state.success_msg = "🧨 ลบเรียบร้อย"; st.rerun()
 
 # --- 4. MAIN LAYOUT ---
 st.markdown("<h1>SUPER 5S WORLD</h1>", unsafe_allow_html=True)
