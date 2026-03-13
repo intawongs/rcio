@@ -605,6 +605,7 @@ def get_supabase():
 
 supabase = get_supabase()
 
+# แจ้งเตือน Toast
 if "success_msg" in st.session_state:
     st.toast(st.session_state.success_msg)
     del st.session_state.success_msg
@@ -612,17 +613,16 @@ if "success_msg" in st.session_state:
 MASTER_TOOLS = ["ไม้กวาด", "น้ำยา", "ผ้าคลุมกันฝุ่น", "ถุงขยะ", "ถังน้ำ", "แปรงขัดพื้น", "เครื่องดูดฝุ่น", "ไม้ถูพื้น", "ถุงมือ", "หน้ากากกันฝุ่น"]
 PRESET_ACTIVITIES = ["สะสาง: แยกของไม่จำเป็นออก", "สะดวก: ตีเส้นแบ่งเขต/ติดป้ายชื่อ", "สะอาด: ปัดหยากไย่และเช็ดพื้น", "สุขลักษณะ: ถ่ายรูป Before & After", "สร้างนิสัย: บันทึกมาตรฐานใหม่"]
 
-st.markdown("""
-<style>
+# CSS (เดิม)
+st.markdown("""<style>
     @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Kanit:wght@400;700;800&display=swap');
     .stApp { background-color: #5C94FC; font-family: 'Kanit', sans-serif; }
     h1 { font-family: 'Press Start 2P', cursive; color: #FFFFFF !important; text-shadow: 4px 4px 0px #E4000F; text-align: center; font-size: 38px !important; }
     .stTabs [data-baseweb="tab-list"] { background-color: #008800; border: 4px solid #000; padding: 8px; }
-    .stTabs [data-baseweb="tab"] { color: white !important; font-size: 20px !important; }
+    .stTabs [data-baseweb="tab"] { color: white !important; }
     .stTabs [aria-selected="true"] { background-color: #E4000F !important; }
     .stButton > button { background-color: #F8B800 !important; border: 3px solid #000 !important; font-weight: 800 !important; box-shadow: 3px 3px 0px #8C5200; }
-</style>
-""", unsafe_allow_html=True)
+</style>""", unsafe_allow_html=True)
 
 # --- 2. ฟังก์ชันช่วยประมวลผล ---
 def is_inside(x, y, poly):
@@ -639,8 +639,7 @@ def is_inside(x, y, poly):
 
 def is_convex(points):
     def cp(o, a, b): return (a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0])
-    points = list(points)
-    n = len(points)
+    points = list(points); n = len(points)
     res = [cp(points[i], points[(i+1)%n], points[(i+2)%n]) for i in range(n)]
     return all(x > 0 for x in res) or all(x < 0 for x in res)
 
@@ -661,7 +660,7 @@ def create_zone_dialog(points, w, h):
 
 @st.dialog("⭐️ LEVEL SETTINGS", width="large")
 def edit_mission_dialog(item_id):
-    # 1. โหลดข้อมูลเข้า Temp State (ทำครั้งเดียวตอนเปิด)
+    # โหลดข้อมูลเข้า Temp ครั้งแรก
     if f"temp_init_{item_id}" not in st.session_state:
         res = supabase.table("cleaning_plans").select("*").eq("id", item_id).execute()
         if res.data:
@@ -676,85 +675,65 @@ def edit_mission_dialog(item_id):
     
     with t1:
         st.session_state[f"temp_name_{item_id}"] = st.text_input("ชื่อด่าน", value=st.session_state[f"temp_name_{item_id}"])
-        st.session_state[f"temp_staff_{item_id}"] = st.text_input("ฮีโร่ผู้รับผิดชอบ", value=st.session_state[f"temp_staff_{item_id}"])
+        st.session_state[f"temp_staff_{item_id}"] = st.text_input("ฮีโร่", value=st.session_state[f"temp_staff_{item_id}"])
 
     with t2:
-        st.markdown("### 🧹 ภารกิจ (เพิ่มได้ต่อเนื่อง)")
-        # ใช้ Key ที่ไม่ซ้ำเพื่อให้ Widget คงสถานะไว้
-        a_sel = st.selectbox("เลือกกิจกรรม", ["➕ พิมพ์เอง..."] + PRESET_ACTIVITIES, key=f"sel_{item_id}")
-        a_cust = st.text_input("ระบุกิจกรรมใหม่", key=f"cust_{item_id}")
-        c1, c2 = st.columns(2)
-        n_p = c1.number_input("จำนวนคน", 1, 50, 1, key=f"np_{item_id}")
-        n_h = c2.number_input("เวลา (ชม.)", 1, 50, 1, key=f"nh_{item_id}")
+        st.markdown("### 🧹 ภารกิจ (เพิ่มได้เรื่อยๆ)")
+        a_sel = st.selectbox("กิจกรรม", ["➕ พิมพ์เอง..."] + PRESET_ACTIVITIES, key=f"asel_{item_id}")
+        a_cust = st.text_input("ระบุกิจกรรม", key=f"acust_{item_id}")
+        c1, c2 = st.columns(2); n_p = c1.number_input("คน", 1, 50, 1, key=f"np_{item_id}"); n_h = c2.number_input("ชม.", 1, 50, 1, key=f"nh_{item_id}")
         
-        # --- จุดสำคัญ: ปุ่มนี้ห้ามมี st.rerun() ---
-        if st.button("➕ เพิ่มลงรายการ (Popup ไม่ปิด)", use_container_width=True, key=f"add_act_btn_{item_id}"):
+        # แก้ปัญหา Popup ปิด: ใช้ on_click เพื่อรันเฉพาะกิจ
+        def add_act():
             name = a_cust if a_sel == "➕ พิมพ์เอง..." else a_sel
-            if name:
-                # อัปเดต List ใน State ตรงๆ
-                st.session_state[f"temp_acts_{item_id}"].append({
-                    "name": name, "people": int(n_p), "hours": int(n_h)
-                })
-                st.toast(f"เพิ่ม {name} แล้ว! (รายการจะอัปเดตเมื่อขยับเม้าส์หรือกดบันทึก)")
+            if name: st.session_state[f"temp_acts_{item_id}"].append({"name": name, "people": n_p, "hours": n_h})
+        
+        st.button("➕ เพิ่มลงตะกร้า", use_container_width=True, on_click=add_act)
 
-        # แสดงรายการที่เพิ่มแล้ว
-        st.markdown("---")
         for i, a in enumerate(st.session_state[f"temp_acts_{item_id}"]):
             cols = st.columns([3, 1, 1, 0.5])
-            cols[0].write(f"🔹 {a['name']}")
-            cols[1].write(f"👥{a['people']}")
-            cols[2].write(f"⏱️{a['hours']}")
-            if cols[3].button("🗑️", key=f"del_a_{item_id}_{i}"):
-                st.session_state[f"temp_acts_{item_id}"].pop(i)
-                st.rerun() # อนุโลมให้ rerun ตอนลบเพื่อให้รายการหายไปทันที
+            cols[0].write(f"🔹 {a['name']}"); cols[1].write(f"👥{a['people']}"); cols[2].write(f"⏱️{a['hours']}")
+            if cols[3].button("🗑️", key=f"da_{item_id}_{i}"):
+                st.session_state[f"temp_acts_{item_id}"].pop(i); st.rerun()
 
     with t3:
         st.markdown("### 🎒 อุปกรณ์")
-        t_sel = st.selectbox("ไอเทม", MASTER_TOOLS + ["➕ พิมพ์เอง..."], key=f"ts_{item_id}")
+        t_sel = st.selectbox("ไอเทม", MASTER_TOOLS + ["➕ พิมพ์เอง..."], key=f"tsel_{item_id}")
         t_qty = st.number_input("จำนวน", 1, 100, 1, key=f"tq_{item_id}")
-        if st.button("➕ เพิ่มอุปกรณ์", use_container_width=True, key=f"add_tool_btn_{item_id}"):
-            st.session_state[f"temp_tools_{item_id}"].append({"item": t_sel, "amount": int(t_qty)})
-            st.toast(f"เพิ่ม {t_sel} แล้ว!")
-
+        
+        def add_tool():
+            st.session_state[f"temp_tools_{item_id}"].append({"item": t_sel, "amount": t_qty})
+        
+        st.button("➕ เพิ่มเข้าเป้", use_container_width=True, on_click=add_tool)
+        
         for i, t in enumerate(st.session_state[f"temp_tools_{item_id}"]):
             cols = st.columns([4, 1, 0.5])
             cols[0].write(f"📦 {t['item']}"); cols[1].write(f"x{t['amount']}")
-            if cols[2].button("🗑️", key=f"del_t_{item_id}_{i}"):
+            if cols[2].button("🗑️", key=f"dt_{item_id}_{i}"):
                 st.session_state[f"temp_tools_{item_id}"].pop(i); st.rerun()
 
     st.divider()
-    # --- ปุ่มบันทึกไม้ตาย (กดทีเดียวส่ง Supabase และปิด Popup) ---
-    if st.button("💾 บันทึกทุกอย่างลงฐานข้อมูล (ปิดหน้าต่าง)", type="primary", use_container_width=True, key=f"save_all_{item_id}"):
-        supabase.table("cleaning_plans").update({
-            "zone_name": st.session_state[f"temp_name_{item_id}"],
-            "responsible_staff": st.session_state[f"temp_staff_{item_id}"],
-            "activities": st.session_state[f"temp_acts_{item_id}"],
-            "tools": st.session_state[f"temp_tools_{item_id}"]
-        }).eq("id", item_id).execute()
-        
-        # เคลียร์ State หลังบันทึก
+    if st.button("💾 บันทึกทุกอย่างลงฐานข้อมูล", type="primary", use_container_width=True):
+        supabase.table("cleaning_plans").update({"zone_name": st.session_state[f"temp_name_{item_id}"], "responsible_staff": st.session_state[f"temp_staff_{item_id}"], "activities": st.session_state[f"temp_acts_{item_id}"], "tools": st.session_state[f"temp_tools_{item_id}"]}).eq("id", item_id).execute()
         for k in [f"temp_init_{item_id}", f"temp_acts_{item_id}", f"temp_tools_{item_id}", f"temp_name_{item_id}", f"temp_staff_{item_id}"]:
             if k in st.session_state: del st.session_state[k]
-        
-        st.session_state.success_msg = "✅ บันทึก Mission ทั้งหมดสำเร็จ!"
-        st.rerun()
+        st.session_state.success_msg = "✅ บันทึกสำเร็จ!"; st.rerun()
 
     with t4:
-        if st.button("🧨 ยืนยันการลบด่าน", use_container_width=True, key=f"final_del_{item_id}"):
+        if st.button("🧨 ยืนยันลบด่าน", use_container_width=True):
             supabase.table("cleaning_plans").delete().eq("id", item_id).execute()
-            st.session_state.success_msg = "🧨 ลบเรียบร้อย"; st.rerun()
+            st.session_state.success_msg = "🧨 ลบแล้ว"; st.rerun()
 
 # --- 4. MAIN LAYOUT ---
 st.markdown("<h1>SUPER 5S WORLD</h1>", unsafe_allow_html=True)
 tab_map, tab_score = st.tabs(["🎮 แผนที่ตะลุยด่าน", "🏆 ตารางคะแนนและสรุปผล"])
 
-@st.fragment
-def map_engine():
+with tab_map:
     all_plans = supabase.table("cleaning_plans").select("*").order("created_at", desc=True).execute().data
     col_info, col_display = st.columns([1.5, 5])
     
     with col_info:
-        zoom_scale = st.slider("Zoom (%)", 50, 250, 100, step=10)
+        zoom_scale = st.slider("Zoom (%)", 50, 250, 100, step=10, key="zoom_slider")
         zoom_factor = zoom_scale / 100
         if st.button("🔄 ล้างจุดวาด", use_container_width=True):
             st.session_state.points = []; st.rerun()
@@ -765,7 +744,6 @@ def map_engine():
             img = Image.open("map.png")
             orig_w, orig_h = img.size
             draw = ImageDraw.Draw(img)
-            
             for p in all_plans:
                 c = p.get('coords', {}).get('points', [])
                 if c:
@@ -795,19 +773,20 @@ def map_engine():
                     else:
                         st.session_state.points.append((cx, cy))
                         if len(st.session_state.points) == 4:
-                            if is_convex(st.session_state.points): create_zone_dialog(st.session_state.points, orig_w, orig_h)
-                            else: st.toast("⚠️ เส้นตัดกัน!"); st.session_state.points = []
-                        st.rerun()
+                            if is_convex(st.session_state.points):
+                                create_zone_dialog(st.session_state.points, orig_w, orig_h)
+                            else:
+                                st.toast("⚠️ เส้นตัดกัน!")
+                                st.session_state.points = []
+                                st.rerun()
+                        else:
+                            st.rerun()
         except Exception as e: st.error(f"Error: {e}")
 
-with tab_map:
-    map_engine()
-
 with tab_score:
-    res = supabase.table("cleaning_plans").select("*").execute().data
-    if res:
+    if all_plans:
         df_data = []
-        for p in res:
+        for p in all_plans:
             t_str = ", ".join([f"{x['item']}(x{x['amount']})" for x in p.get('tools', [])])
             a_str = ", ".join([x['name'] for x in p.get('activities', [])])
             df_data.append({"ด่าน": p['zone_name'], "ฮีโร่": p.get('responsible_staff'), "อุปกรณ์": t_str, "กิจกรรม": a_str})
